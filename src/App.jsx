@@ -252,6 +252,16 @@ function App() {
     });
   }, [libraryScanner]);
 
+  // Netplay Quick Join Detection
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const joinCode = params.get('join');
+    if (joinCode && netplayStatus === 'DISCONNECTED') {
+      setJoinId(joinCode);
+      setActiveTab('netplay');
+    }
+  }, []);
+
   const switchTab = (tab) => {
     setIsRunning(false);
     setActiveTab(tab);
@@ -412,6 +422,13 @@ function App() {
     netplayManager.disconnect();
     setNetplayStatus('DISCONNECTED');
     setPeerId('');
+  };
+
+  const copyInviteLink = () => {
+    const url = `${window.location.origin}${window.location.pathname}?join=${peerId}`;
+    navigator.clipboard.writeText(url);
+    // Visual feedback? maybe a toast. For now alert is fine in this MVP.
+    alert('Invite link copied! Send it to your friend.');
   };
 
 
@@ -578,12 +595,17 @@ function App() {
                   <p style={{ color: '#0f0', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>
                     Players in Lobby: {playersCount} / 4
                   </p>
-                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: '8px', fontSize: '1.2rem', fontFamily: 'monospace', marginBottom: '1rem', width: '100%', wordBreak: 'break-all' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: '8px', fontSize: '1.2rem', fontFamily: 'monospace', marginBottom: '1rem', width: '100%', wordBreak: 'break-all', position: 'relative' }}>
                     {peerId || 'Generating...'}
                   </div>
-                  <button className="btn-primary" style={{ background: 'transparent', border: '1px solid #ff5e5e', color: '#ff5e5e', padding: '0.5rem 1.5rem', fontSize: '0.9rem', marginTop: '0' }} onClick={handleCancelNetplay}>
-                    Cancel Room
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                    <button className="btn-primary" onClick={copyInviteLink} style={{ flex: 1, fontSize: '0.85rem' }}>
+                      📋 Copy Invite Link
+                    </button>
+                    <button className="btn-primary" style={{ flex: 1, background: 'transparent', border: '1px solid #ff5e5e', color: '#ff5e5e', fontSize: '0.85rem' }} onClick={handleCancelNetplay}>
+                      Cancel Room
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -76,6 +76,8 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
   const [cheatInput, setCheatInput] = useState('');
   const [cheatsApplied, setCheatsApplied] = useState([]);
   const [mappingAction, setMappingAction] = useState(null);
+  const [mappingType, setMappingType] = useState('keyboard'); // 'keyboard' or 'gamepad'
+  const [thumbnails, setThumbnails] = useState({});
 
   // Load saved slot metadata
   useEffect(() => {
@@ -83,24 +85,71 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
   }, []);
 
   const loadSlotMeta = async () => {
-    const meta = await idb.get('tieSaveSlotsMeta') || [];
+    const meta = await idb.get('tieSaveSlotsMeta') || Array(SLOT_COUNT).fill(null);
     setSlots(meta);
+    
+    // Load thumbnails
+    const thumbs = {};
+    for (let i = 0; i < SLOT_COUNT; i++) {
+      const t = await idb.get(`tieSaveThumb_${i}`);
+      if (t) thumbs[i] = t;
+    }
+    setThumbnails(thumbs);
   };
 
   // Close menu on ESC (only if not remapping)
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (mappingAction) {
+    const handleEvents = (e) => {
+      // Key mapping
+      if (mappingAction && mappingType === 'keyboard' && e.type === 'keydown') {
         e.preventDefault();
         inputManager?.remapKey(mappingAction, e.code);
         setMappingAction(null);
         return;
       }
-      if (e.code === 'Escape') onClose();
+      
+      if (e.type === 'keydown' && e.code === 'Escape' && !mappingAction) onClose();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, mappingAction, inputManager]);
+
+    // Gamepad mapping loop
+    let raf;
+    const pollGamepad = () => {
+      if (mappingAction && mappingType === 'gamepad') {
+        const gps = navigator.getGamepads();
+        for (const gp of gps) {
+          if (!gp) continue;
+          
+          // Check buttons
+          gp.buttons.forEach((btn, i) => {
+            if (btn.pressed) {
+              inputManager?.remapGamepad(mappingAction, `button_${i}`);
+              setMappingAction(null);
+            }
+          });
+          
+          // Check axes
+          gp.axes.forEach((axis, i) => {
+            if (axis < -0.6) {
+              inputManager?.remapGamepad(mappingAction, `axis_${i}_-1`);
+              setMappingAction(null);
+            } else if (axis > 0.6) {
+              inputManager?.remapGamepad(mappingAction, `axis_${i}_1`);
+              setMappingAction(null);
+            }
+          });
+        }
+      }
+      raf = requestAnimationFrame(pollGamepad);
+    };
+
+    window.addEventListener('keydown', handleEvents);
+    raf = requestAnimationFrame(pollGamepad);
+    
+    return () => {
+      window.removeEventListener('keydown', handleEvents);
+      cancelAnimationFrame(raf);
+    };
+  }, [onClose, mappingAction, mappingType, inputManager]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -119,6 +168,15 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
     try {
       const result = await core.nostalgist.saveState();
       await idb.set(`tieSaveSlot_${slotIndex}`, result.state);
+      
+      // Capture Thumbnail
+      const canvas = canvasRef?.current;
+      if (canvas) {
+        const thumb = canvas.toDataURL('image/jpeg', 0.6);
+        await idb.set(`tieSaveThumb_${slotIndex}`, thumb);
+        setThumbnails(prev => ({ ...prev, [slotIndex]: thumb }));
+      }
+      
       const meta = await idb.get('tieSaveSlotsMeta') || Array(SLOT_COUNT).fill(null);
       meta[slotIndex] = {
         timestamp: Date.now(),
@@ -278,8 +336,23 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
             <div className="controls-panel">
               <div className="controls-header-info">
                 <span className="controls-system-badge">{layout.name}</span>
-                <span className="controls-hint">Click a button, then press the key you want to bind.</span>
+                <div className="mapping-type-toggle">
+                  <button 
+                    className={`type-btn ${mappingType === 'keyboard' ? 'active' : ''}`}
+                    onClick={() => setMappingType('keyboard')}
+                  >⌨️ Keyboard</button>
+                  <button 
+                    className={`type-btn ${mappingType === 'gamepad' ? 'active' : ''}`}
+                    onClick={() => setMappingType('gamepad')}
+                  >🎮 Gamepad</button>
+                </div>
               </div>
+              
+              <p className="controls-hint" style={{ marginTop: '0.5rem', marginBottom: '1rem' }}>
+                {mappingType === 'keyboard' 
+                  ? 'Click a button, then press the key you want to bind.' 
+                  : 'Click a button, then press the controller button you want to bind.'}
+              </p>
 
               {mappingAction && (
                 <div className="mapping-prompt">
@@ -299,7 +372,7 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
                           className={`control-bind-btn ${mappingAction === action ? 'listening' : ''}`}
                           onClick={() => setMappingAction(action)}
                         >
-                          {mappingAction === action ? '...' : inputManager?.getButtonName(action) || 'UNBOUND'}
+                          {mappingAction === action ? '...' : (mappingType === 'keyboard' ? inputManager?.getButtonName(action) : inputManager?.getGamepadButtonName(action)) || 'UNBOUND'}
                         </button>
                       </div>
                     ))}
@@ -319,7 +392,7 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
                           className={`control-bind-btn ${mappingAction === action ? 'listening' : ''}`}
                           onClick={() => setMappingAction(action)}
                         >
-                          {mappingAction === action ? '...' : inputManager?.getButtonName(action) || 'UNBOUND'}
+                          {mappingAction === action ? '...' : (mappingType === 'keyboard' ? inputManager?.getButtonName(action) : inputManager?.getGamepadButtonName(action)) || 'UNBOUND'}
                         </button>
                       </div>
                     ))}
@@ -339,7 +412,7 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
                           className={`control-bind-btn ${mappingAction === action ? 'listening' : ''}`}
                           onClick={() => setMappingAction(action)}
                         >
-                          {mappingAction === action ? '...' : inputManager?.getButtonName(action) || 'UNBOUND'}
+                          {mappingAction === action ? '...' : (mappingType === 'keyboard' ? inputManager?.getButtonName(action) : inputManager?.getGamepadButtonName(action)) || 'UNBOUND'}
                         </button>
                       </div>
                     ))}
@@ -359,7 +432,7 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
                           className={`control-bind-btn ${mappingAction === action ? 'listening' : ''}`}
                           onClick={() => setMappingAction(action)}
                         >
-                          {mappingAction === action ? '...' : inputManager?.getButtonName(action) || 'UNBOUND'}
+                          {mappingAction === action ? '...' : (mappingType === 'keyboard' ? inputManager?.getButtonName(action) : inputManager?.getGamepadButtonName(action)) || 'UNBOUND'}
                         </button>
                       </div>
                     ))}
@@ -377,10 +450,17 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
                 const isEmpty = !slot;
                 return (
                   <div key={i} className={`save-slot ${isEmpty ? 'empty' : 'filled'}`}>
+                    <div className="save-slot-thumb">
+                      {thumbnails[i] ? (
+                        <img src={thumbnails[i]} alt={`Slot ${i+1}`} />
+                      ) : (
+                        <div className="thumb-placeholder">No Image</div>
+                      )}
+                    </div>
                     <div className="save-slot-info">
                       <span className="save-slot-number">Slot {i + 1}</span>
                       <span className="save-slot-date">
-                        {isEmpty ? 'Empty' : slot.date}
+                        {isEmpty ? 'Empty Slot' : slot.date}
                       </span>
                     </div>
                     <div className="save-slot-actions">

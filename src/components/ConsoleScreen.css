@@ -31,19 +31,35 @@
   z-index: 10;
 }
 
-.hud-fps {
-  color: #00f0ff;
+.hud-performance {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   font-family: 'Courier New', monospace;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  color: #fff;
+  min-width: 80px;
+}
+
+.perf-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
   font-weight: 700;
-  text-shadow: 1px 1px 0 #000, 0 0 6px rgba(0, 240, 255, 0.4);
-  background: rgba(0, 0, 0, 0.5);
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
+}
+
+.perf-label {
+  color: var(--accent-secondary);
+  font-size: 0.65rem;
+  opacity: 0.8;
 }
 
 .hud-ff {
-  color: #ff2e93;
+  color: var(--accent);
   font-family: 'Courier New', monospace;
   font-size: 0.8rem;
   font-weight: 700;

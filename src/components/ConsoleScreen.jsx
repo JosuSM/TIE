@@ -10,8 +10,11 @@ export function ConsoleScreen({ core, romDetails, isRunning, inputManager, netpl
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const [fps, setFps] = useState(0);
+  const [frameTime, setFrameTime] = useState(0);
+  const [memory, setMemory] = useState(0);
   const framesRendered = useRef(0);
   const lastTime = useRef(performance.now());
+  const frameStart = useRef(0);
 
   // Audio state
   const [volume, setVolume] = useState(() => {
@@ -85,6 +88,7 @@ export function ConsoleScreen({ core, romDetails, isRunning, inputManager, netpl
 
       let lastInputStr = "";
       const nostalgistStep = () => {
+        frameStart.current = performance.now();
         inputManager.pollGamepads();
         const pIdx = romDetails.pIdx || 0;
         const localInput = inputManager.getState(pIdx);
@@ -100,6 +104,19 @@ export function ConsoleScreen({ core, romDetails, isRunning, inputManager, netpl
             lastInputStr = currentInputStr;
           }
         }
+        
+        framesRendered.current++;
+        const now = performance.now();
+        if (now - lastTime.current >= 1000) {
+          setFps(framesRendered.current);
+          framesRendered.current = 0;
+          lastTime.current = now;
+          if (performance.memory) {
+            setMemory(Math.round(performance.memory.usedJSHeapSize / 1048576));
+          }
+        }
+        setFrameTime((now - frameStart.current).toFixed(2));
+
         rafId.current = requestAnimationFrame(nostalgistStep);
       };
       rafId.current = requestAnimationFrame(nostalgistStep);
@@ -114,6 +131,7 @@ export function ConsoleScreen({ core, romDetails, isRunning, inputManager, netpl
     const ctx = canvas.getContext('2d', { desynchronized: settings?.lowLatency, willReadFrequently: true });
 
     const step = () => {
+      frameStart.current = performance.now();
       inputManager.pollGamepads();
       const isNetplay = netplayManager && netplayManager.connection;
       const localPlayerIndex = isNetplay ? (netplayManager.isHost ? 0 : 1) : 0;
@@ -139,7 +157,11 @@ export function ConsoleScreen({ core, romDetails, isRunning, inputManager, netpl
         setFps(framesRendered.current);
         framesRendered.current = 0;
         lastTime.current = now;
+        if (performance.memory) {
+            setMemory(Math.round(performance.memory.usedJSHeapSize / 1048576));
+        }
       }
+      setFrameTime((now - frameStart.current).toFixed(2));
 
       rafId.current = requestAnimationFrame(step);
     };
@@ -195,7 +217,11 @@ export function ConsoleScreen({ core, romDetails, isRunning, inputManager, netpl
       {/* HUD Overlays */}
       <div className="hud-overlays">
         {settings?.showFps && (
-          <div className="hud-fps">FPS: {fps}</div>
+          <div className="hud-performance glass-panel">
+            <div className="perf-item"><span className="perf-label">FPS</span> {fps}</div>
+            <div className="perf-item"><span className="perf-label">TIME</span> {frameTime}ms</div>
+            {memory > 0 && <div className="perf-item"><span className="perf-label">MEM</span> {memory}MB</div>}
+          </div>
         )}
         {isFastForward && (
           <div className="hud-ff">⏩ FF</div>

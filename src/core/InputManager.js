@@ -4,15 +4,19 @@ export class InputManager {
     this.gamepads = [];
 
     // Default universal keyboard mapping mapped to abstract emulator positions
-    const defaultMap = {
+    const defaultKeyMap = {
       ArrowUp: 'up',
       ArrowDown: 'down',
       ArrowLeft: 'left',
       ArrowRight: 'right',
       KeyZ: 'a',
       KeyX: 'b',
+      KeyA: 'y',
+      KeyS: 'x',
       Enter: 'start',
       ShiftRight: 'select',
+      KeyQ: 'l',
+      KeyW: 'r',
       // Player 2 Map
       KeyW: 'up2',
       KeyS: 'down2',
@@ -24,14 +28,36 @@ export class InputManager {
       Digit2: 'select2'
     };
 
+    const defaultGamepadMap = {
+      'button_12': 'up',
+      'button_13': 'down',
+      'button_14': 'left',
+      'button_15': 'right',
+      'button_0':  'b',
+      'button_1':  'a',
+      'button_2':  'y',
+      'button_3':  'x',
+      'button_4':  'l',
+      'button_5':  'r',
+      'button_8':  'select',
+      'button_9':  'start',
+      'axis_1_-1': 'up',
+      'axis_1_1':  'down',
+      'axis_0_-1': 'left',
+      'axis_0_1':  'right'
+    };
+
     // Load custom user map from HTML5 localStorage if it exists
-    const saved = localStorage.getItem('tieKeyBinding');
-    this.keyMap = saved ? JSON.parse(saved) : defaultMap;
+    const savedKeys = localStorage.getItem('tieKeyBinding');
+    this.keyMap = savedKeys ? JSON.parse(savedKeys) : defaultKeyMap;
+
+    const savedGamepad = localStorage.getItem('tieGamepadBinding');
+    this.gamepadMap = savedGamepad ? JSON.parse(savedGamepad) : defaultGamepadMap;
     
     // Abstract Controller Initializer
     this.controllerState = [
-      { up: 0, down: 0, left: 0, right: 0, a: 0, b: 0, select: 0, start: 0, l: 0, r: 0 }, // Player 1
-      { up: 0, down: 0, left: 0, right: 0, a: 0, b: 0, select: 0, start: 0, l: 0, r: 0 }  // Player 2
+      { up: 0, down: 0, left: 0, right: 0, a: 0, b: 0, x: 0, y: 0, select: 0, start: 0, l: 0, r: 0 }, // Player 1
+      { up: 0, down: 0, left: 0, right: 0, a: 0, b: 0, x: 0, y: 0, select: 0, start: 0, l: 0, r: 0 }  // Player 2
     ];
     
     // Mobile Touch State
@@ -64,12 +90,27 @@ export class InputManager {
     return key ? key.replace('Key', '').replace('Arrow', '') : 'UNBOUND';
   }
 
+  getGamepadButtonName(action) {
+    const key = Object.keys(this.gamepadMap).find(k => this.gamepadMap[k] === action);
+    if (!key) return 'UNBOUND';
+    return key.replace('button_', 'Btn ').replace('axis_', 'Axis ');
+  }
+
   remapKey(action, keyCode) {
     for (const [key, mappedAction] of Object.entries(this.keyMap)) {
       if (mappedAction === action) delete this.keyMap[key];
     }
     this.keyMap[keyCode] = action;
     localStorage.setItem('tieKeyBinding', JSON.stringify(this.keyMap));
+  }
+
+  remapGamepad(action, inputId) {
+    // inputId is like 'button_0' or 'axis_1_-1'
+    for (const [id, mappedAction] of Object.entries(this.gamepadMap)) {
+      if (mappedAction === action) delete this.gamepadMap[id];
+    }
+    this.gamepadMap[inputId] = action;
+    localStorage.setItem('tieGamepadBinding', JSON.stringify(this.gamepadMap));
   }
 
   pollGamepads() {
@@ -81,13 +122,12 @@ export class InputManager {
     if (this.touchState[0][button] !== undefined && this.touchState[0][button] !== newState) {
       this.touchState[0][button] = newState;
 
-      // Dispatch synthetic event for Nostalgist WASM bindings
       const buttonToKey = {
         'up': 'ArrowUp',
         'down': 'ArrowDown',
         'left': 'ArrowLeft',
         'right': 'ArrowRight',
-        'a': 'KeyX', // RetroArch A mapped to X by default generally or Z? (Z is typically B/Cross, X is A/Circle)
+        'a': 'KeyX',
         'b': 'KeyZ',
         'select': 'ShiftRight',
         'start': 'Enter',
@@ -152,26 +192,23 @@ export class InputManager {
       }
     }
 
-    // 2. Override with Gamepad Polling if standard device is active
+    // 2. Process Gamepad Map
     const gp = this.gamepads[playerIndex];
-    if (gp && gp.buttons) {
-      if (gp.buttons[12] && gp.buttons[12].pressed) state.up = 1;     // D-Pad Up
-      if (gp.buttons[13] && gp.buttons[13].pressed) state.down = 1;   // D-Pad Down
-      if (gp.buttons[14] && gp.buttons[14].pressed) state.left = 1;   // D-Pad Left
-      if (gp.buttons[15] && gp.buttons[15].pressed) state.right = 1;  // D-Pad Right
-      
-      // Analog Stick 1 polling support
-      if (gp.axes[1] < -0.5) state.up = 1;
-      if (gp.axes[1] > 0.5) state.down = 1;
-      if (gp.axes[0] < -0.5) state.left = 1;
-      if (gp.axes[0] > 0.5) state.right = 1;
-
-      if (gp.buttons[0] && gp.buttons[0].pressed) state.b = 1;        // Xbox A / PS Cross
-      if (gp.buttons[1] && gp.buttons[1].pressed) state.a = 1;        // Xbox B / PS Circle
-      if (gp.buttons[4] && gp.buttons[4].pressed) state.l = 1;        // L1
-      if (gp.buttons[5] && gp.buttons[5].pressed) state.r = 1;        // R1
-      if (gp.buttons[8] && gp.buttons[8].pressed) state.select = 1;
-      if (gp.buttons[9] && gp.buttons[9].pressed) state.start = 1;
+    if (gp) {
+      for (const [id, action] of Object.entries(this.gamepadMap)) {
+        if (id.startsWith('button_')) {
+          const btnIdx = parseInt(id.replace('button_', ''));
+          if (gp.buttons[btnIdx] && gp.buttons[btnIdx].pressed) state[action] = 1;
+        } else if (id.startsWith('axis_')) {
+          const parts = id.split('_');
+          const axisIdx = parseInt(parts[1]);
+          const direction = parseInt(parts[2]); // -1 or 1
+          if (gp.axes[axisIdx]) {
+            if (direction === -1 && gp.axes[axisIdx] < -0.5) state[action] = 1;
+            if (direction === 1 && gp.axes[axisIdx] > 0.5) state[action] = 1;
+          }
+        }
+      }
     }
 
     // 3. Merge Touch State (Player 1 only)
