@@ -39,15 +39,44 @@ export class RetroCore {
 
     let core = extensionToCore[ext] || 'fceumm';
 
-    // Standard Maps
+    // Build Player 1 & 2 maps from localStorage tieKeyBinding
+    const defaultKeyMap = {
+      ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+      KeyZ: 'a', KeyX: 'b', KeyA: 'y', KeyS: 'x',
+      Enter: 'start', ShiftRight: 'select', KeyQ: 'l', KeyW: 'r',
+      KeyW: 'up2', KeyS: 'down2', KeyA: 'left2', KeyD: 'right2',
+      KeyJ: 'a2', KeyK: 'b2', Digit1: 'start2', Digit2: 'select2'
+    };
+    
+    let savedKeys;
+    try {
+      savedKeys = JSON.parse(localStorage.getItem('tieKeyBinding'));
+    } catch(e) {}
+    const keyMap = savedKeys || defaultKeyMap;
+
+    const p1Map = {
+      up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight',
+      a: 'KeyZ', b: 'KeyX', y: 'KeyA', x: 'KeyS', select: 'ShiftRight', start: 'Enter', l: 'KeyQ', r: 'KeyE'
+    };
+    const p2Map = { ...p1Map }; // Fallback
+    
+    // Invert mapping intelligently
+    for (const [code, action] of Object.entries(keyMap)) {
+      if (!action.endsWith('2')) p1Map[action] = code;
+      else p2Map[action.replace('2', '')] = code;
+    }
+
+    // Standard Maps for Netplay offsets
     const globalMaps = [
-       { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', a: 'KeyX', b: 'KeyZ', y: 'KeyA', x: 'KeyS', select: 'ShiftRight', start: 'Enter', l: 'KeyQ', r: 'KeyW' },
+       p1Map,
        { up: 't', down: 'g', left: 'f', right: 'h', a: 'j', b: 'k', y: 'u', x: 'i', select: 'v', start: 'b', l: 'c', r: 'n' },
        { up: '8', down: '5', left: '4', right: '6', a: '7', b: '9', y: '1', x: '2', select: '3', start: '0', l: '-', r: '=' },
        { up: 'i', down: 'k', left: 'j', right: 'l', a: ';', b: '\'', y: ',', x: '.', select: '[', start: ']', l: '/', r: '\\' }
     ];
 
-    // Swap our keys so the local player always gets the standard comfortable Arrow Keys
+    globalMaps[1] = p2Map; // Overwrite P2 with local config
+
+    // Swap our keys so the local player always gets the primary P1 bindings
     let maps = [...globalMaps];
     if (localPlayerIndex !== 0) {
        let temp = maps[0];

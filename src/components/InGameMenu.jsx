@@ -153,7 +153,8 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
+      const wrapper = document.querySelector('.console-wrapper') || document.documentElement;
+      wrapper.requestFullscreen().catch(err => {
         alert(`Error: ${err.message}`);
       });
     } else {
