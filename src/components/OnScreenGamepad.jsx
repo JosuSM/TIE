@@ -6,15 +6,18 @@ export function OnScreenGamepad({ inputManager, scale = 1, opacity = 0.5, system
   const dpadRef = useRef(null);
   const activeDpadZones = useRef({ up: false, down: false, left: false, right: false });
 
-  const triggerHaptic = useCallback(() => {
+  const triggerHaptic = useCallback((pattern = 10) => {
     if (hapticFeedback && navigator.vibrate) {
-      navigator.vibrate(10);
+      navigator.vibrate(pattern);
     }
   }, [hapticFeedback]);
 
   const handleActionTouch = (button, isPressed) => (e) => {
     e.preventDefault();
-    if (isPressed) triggerHaptic();
+    if (isPressed) {
+      const pattern = ['start', 'select'].includes(button) ? [20, 10, 20] : 25;
+      triggerHaptic(pattern);
+    }
     if (inputManager) inputManager.setTouchButton(button, isPressed);
   };
 
@@ -49,7 +52,7 @@ export function OnScreenGamepad({ inputManager, scale = 1, opacity = 0.5, system
     });
 
     if (changed && Object.values(nextZones).some(val => val)) {
-       triggerHaptic();
+       triggerHaptic(15);
     }
   }, [inputManager, triggerHaptic]);
 

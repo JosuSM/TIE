@@ -208,6 +208,7 @@ function App() {
 
   // Filtering & Search
   const [searchQuery, setSearchQuery] = useState('');
+  const [isOfflineReady, setIsOfflineReady] = useState(false);
 
   // Global Setup Settings
   const defaultSettings = {
@@ -243,6 +244,34 @@ function App() {
   // Initialize
   useEffect(() => {
     inputManager.init();
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/TIE/sw.js')
+          .then(reg => {
+            console.log('SW Registered');
+            reg.onupdatefound = () => {
+              const installingWorker = reg.installing;
+              installingWorker.onstatechange = () => {
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New update available, but we'll focus on the "Installed" first
+                }
+              };
+            };
+          })
+          .catch(err => console.error('SW Registration failed', err));
+      });
+      
+      // Listen for message from SW or just check if it's already active
+      navigator.serviceWorker.ready.then(() => {
+        // After some time or active use, we can assume precaching is done.
+        // For a more robust way, we'd postMessage from SW.
+        // For now, let's just show it after a few seconds if it's the first time.
+        setTimeout(() => setIsOfflineReady(true), 4000);
+      });
+    }
+
     return () => inputManager.cleanup();
   }, [inputManager]);
 
@@ -909,6 +938,12 @@ function App() {
         className={`sidebar-backdrop ${sidebarOpen ? 'visible' : ''}`}
         onClick={() => setSidebarOpen(false)}
       />
+
+      {isOfflineReady && (
+        <div className="offline-ready-toast glass-panel" onClick={() => setIsOfflineReady(false)}>
+          <span>📶</span> Ready for offline play!
+        </div>
+      )}
 
       <aside className={`sidebar glass-panel ${sidebarOpen ? 'open' : ''}`}>
         <div className="logo">TIE</div>

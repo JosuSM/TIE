@@ -64,6 +64,9 @@ export class InputManager {
     this.touchState = [
       { up: 0, down: 0, left: 0, right: 0, a: 0, b: 0, select: 0, start: 0, l: 0, r: 0 }
     ];
+
+    // Last known state for detecting transitions (for rumble)
+    this.lastGamepadButtons = [{}, {}];
   }
 
   init() {
@@ -115,6 +118,18 @@ export class InputManager {
 
   pollGamepads() {
     this.gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  }
+
+  triggerGamepadRumble(playerIndex, duration = 50, strong = 0.3, weak = 0.3) {
+    const gp = this.gamepads[playerIndex];
+    if (gp && gp.vibrationActuator) {
+      gp.vibrationActuator.playEffect("dual-rumble", {
+        startDelay: 0,
+        duration: duration,
+        strongMagnitude: strong,
+        weakMagnitude: weak,
+      }).catch(() => {}); // Best effort
+    }
   }
 
   setTouchButton(button, isPressed) {
@@ -195,19 +210,35 @@ export class InputManager {
     // 2. Process Gamepad Map
     const gp = this.gamepads[playerIndex];
     if (gp) {
+      let newlyPressed = false;
       for (const [id, action] of Object.entries(this.gamepadMap)) {
+        let isPressed = false;
         if (id.startsWith('button_')) {
           const btnIdx = parseInt(id.replace('button_', ''));
-          if (gp.buttons[btnIdx] && gp.buttons[btnIdx].pressed) state[action] = 1;
+          if (gp.buttons[btnIdx] && gp.buttons[btnIdx].pressed) isPressed = true;
         } else if (id.startsWith('axis_')) {
           const parts = id.split('_');
           const axisIdx = parseInt(parts[1]);
-          const direction = parseInt(parts[2]); // -1 or 1
+          const direction = parseInt(parts[2]);
           if (gp.axes[axisIdx]) {
-            if (direction === -1 && gp.axes[axisIdx] < -0.5) state[action] = 1;
-            if (direction === 1 && gp.axes[axisIdx] > 0.5) state[action] = 1;
+            if (direction === -1 && gp.axes[axisIdx] < -0.5) isPressed = true;
+            if (direction === 1 && gp.axes[axisIdx] > 0.5) isPressed = true;
           }
         }
+
+        if (isPressed) {
+          state[action] = 1;
+          if (!this.lastGamepadButtons[playerIndex][id]) {
+            newlyPressed = true;
+          }
+          this.lastGamepadButtons[playerIndex][id] = true;
+        } else {
+          this.lastGamepadButtons[playerIndex][id] = false;
+        }
+      }
+
+      if (newlyPressed) {
+        this.triggerGamepadRumble(playerIndex, 40, 0.4, 0.4);
       }
     }
 
