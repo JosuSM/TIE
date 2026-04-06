@@ -331,6 +331,12 @@ function App() {
       <aside className="sidebar glass-panel">
         <div className="logo">TIE</div>
         
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem', marginTop: '-1rem' }}>
+          <a href="https://josusm.github.io" style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', transition: 'opacity 0.2s', fontWeight: '500' }}>
+            ← Voltar ao Portfólio
+          </a>
+        </div>
+
         <div className="nav-label">Main</div>
         <div className="nav-menu">
           <button 
