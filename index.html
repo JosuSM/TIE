@@ -2,13 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/TIE/tie.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TIE</title>
-    <script type="module" crossorigin src="/TIE/assets/index-BbdVOD5P.js"></script>
-    <link rel="stylesheet" crossorigin href="/TIE/assets/index-1J7tELzS.css">
+    <link rel="icon" type="image/svg+xml" href="tie.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>TIE — The Interconnected Emulator</title>
+    <meta name="description" content="TIE is a professional-grade, browser-based emulation frontend supporting 20+ retro gaming systems with Netplay P2P, Library Scanner, CRT filters, and more." />
+    <meta name="theme-color" content="#0f111a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="manifest.json" />
+    <script type="module" crossorigin src="/TIE/assets/index-BFir_Vsy.js"></script>
+    <link rel="stylesheet" crossorigin href="/TIE/assets/index-C2p70GXm.css">
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Register Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          // Use relative path for sw.js to ensure compatibility with Vite's base path
+          navigator.serviceWorker.register('sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
