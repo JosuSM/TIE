@@ -7,6 +7,7 @@ import { InputManager } from './core/InputManager';
 import { NetplayManager } from './core/NetplayManager';
 import { LibraryScanner } from './core/LibraryScanner';
 import { ConsoleIcon } from './components/ConsoleIcon';
+import { GamePatcher } from './components/GamePatcher';
 
 /* ============================================================
    SYSTEM METADATA — icons, gradients, manufacturers
@@ -869,6 +870,17 @@ function App() {
         </div>
       );
     }
+    
+    if (activeTab === 'patcher') {
+      return (
+        <GamePatcher 
+          onPlayPatchedRom={(buffer, filename) => {
+            currentRomBuffer.current = { buffer, filename };
+            bootCore(buffer, filename);
+          }}
+        />
+      );
+    }
 
     if (activeTab === 'about') {
       return (
@@ -970,6 +982,16 @@ function App() {
         </div>
 
 
+        <div className="nav-label">Tools</div>
+        <div className="nav-menu">
+          <button
+            className={`nav-item ${activeTab === 'patcher' && !isRunning ? 'active' : ''}`}
+            onClick={() => switchTab('patcher')}
+          >
+            🪄 Game Patcher
+          </button>
+        </div>
+
         <div className="nav-label">Settings</div>
         <div className="nav-menu">
           <button
@@ -991,7 +1013,7 @@ function App() {
         </div>
       </aside>
 
-      <main className="main-content">
+      <main className={`main-content ${isRunning ? 'is-running' : ''}`}>
         <header className="header glass-panel">
           <button
             className={`sidebar-toggle ${sidebarOpen ? 'open' : ''}`}

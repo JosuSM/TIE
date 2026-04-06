@@ -117,7 +117,8 @@ export class InputManager {
   }
 
   pollGamepads() {
-    this.gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    const rawPads = navigator.getGamepads ? navigator.getGamepads() : [];
+    this.gamepads = Array.from(rawPads).filter(pad => pad !== null);
   }
 
   triggerGamepadRumble(playerIndex, duration = 50, strong = 0.3, weak = 0.3) {

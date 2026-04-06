@@ -1,13 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
 
 :root {
-  --bg-dark: #0f111a;
+  --bg-dark: #070913;
   --bg-gradient: linear-gradient(135deg, #1b162c 0%, #0d1326 100%);
-  --panel-bg: rgba(255, 255, 255, 0.03);
-  --panel-border: rgba(255, 255, 255, 0.08);
-  --panel-backdrop: blur(16px);
+  --panel-bg: rgba(255, 255, 255, 0.04);
+  --panel-border: rgba(255, 255, 255, 0.1);
+  --panel-backdrop: blur(24px) saturate(150%);
   --accent: #ff2e93;
-  --accent-glow: rgba(255, 46, 147, 0.4);
+  --accent-glow: rgba(255, 46, 147, 0.5);
   --accent-secondary: #00f0ff;
   --text-main: #f0f0f0;
   --text-muted: #8892b0;
@@ -27,8 +27,19 @@ body {
   display: flex;
   height: 100vh;
   width: 100vw;
-  background: radial-gradient(circle at 15% 50%, rgba(255, 46, 147, 0.1), transparent 25%),
-              radial-gradient(circle at 85% 30%, rgba(0, 240, 255, 0.1), transparent 25%);
+  background: radial-gradient(circle at 15% 50%, rgba(255, 46, 147, 0.15), transparent 45%),
+              radial-gradient(circle at 85% 30%, rgba(0, 240, 255, 0.15), transparent 45%);
+  background-size: 200% 200%;
+  animation: bgPan 15s ease infinite alternate;
+}
+
+@keyframes bgPan {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
 }
 
 .glass-panel {
@@ -37,6 +48,7 @@ body {
   -webkit-backdrop-filter: var(--panel-backdrop);
   border: 1px solid var(--panel-border);
   border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);
 }
 
 button {
