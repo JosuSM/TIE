@@ -16,6 +16,193 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  image-rendering: pixelated; /* Crucial for emulator retro feel */
+  image-rendering: pixelated;
   background: #000;
+}
+
+/* ============ HUD OVERLAYS ============ */
+.hud-overlays {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  z-index: 10;
+}
+
+.hud-fps {
+  color: #00f0ff;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-shadow: 1px 1px 0 #000, 0 0 6px rgba(0, 240, 255, 0.4);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.hud-ff {
+  color: #ff2e93;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-shadow: 1px 1px 0 #000;
+  background: rgba(255, 46, 147, 0.2);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  animation: hudBlink 0.8s ease infinite;
+}
+
+.hud-muted {
+  font-size: 0.9rem;
+  text-shadow: 1px 1px 0 #000;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+@keyframes hudBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ============ CRT SCANLINES ============ */
+.crt-scanlines {
+  position: relative;
+}
+
+.crt-scanlines::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15) 0px,
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ============ CRT PHOSPHOR ============ */
+.crt-phosphor {
+  position: relative;
+}
+
+.crt-phosphor::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.12) 0px,
+    rgba(0, 0, 0, 0.12) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 5;
+}
+
+.crt-phosphor::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* ============ CRT CURVATURE (full retro) ============ */
+.crt-curvature {
+  position: relative;
+  border-radius: 20px;
+}
+
+.crt-curvature .console-canvas {
+  border-radius: 16px;
+}
+
+.crt-curvature::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1) 0px,
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 2.5px
+  );
+  pointer-events: none;
+  z-index: 5;
+  border-radius: 20px;
+}
+
+.crt-curvature::after {
+  content: '';
+  position: absolute;
+  top: -2%;
+  left: -2%;
+  width: 104%;
+  height: 104%;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(0, 0, 0, 0.5) 85%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  pointer-events: none;
+  z-index: 6;
+  border-radius: 20px;
+}
+
+/* ============ LCD GRID ============ */
+.crt-lcd {
+  position: relative;
+}
+
+.crt-lcd::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.08) 0px,
+      rgba(0, 0, 0, 0.08) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.08) 0px,
+      rgba(0, 0, 0, 0.08) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  pointer-events: none;
+  z-index: 5;
 }
