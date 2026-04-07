@@ -157,6 +157,7 @@
 
 .crt-curvature .console-canvas {
   border-radius: 16px;
+  filter: url(#crt-chromatic);
 }
 
 .crt-curvature::before {

@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
+import * as idb from 'idb-keyval';
 import './App.css';
 import { DummyCore } from './core/dummy/DummyCore';
 import { RetroCore } from './core/RetroCore';
@@ -7,7 +8,7 @@ import { InputManager } from './core/InputManager';
 import { NetplayManager } from './core/NetplayManager';
 import { LibraryScanner } from './core/LibraryScanner';
 import { ConsoleIcon } from './components/ConsoleIcon';
-import { GamePatcher } from './components/GamePatcher';
+const GamePatcher = lazy(() => import('./components/GamePatcher').then(m => ({ default: m.GamePatcher })));
 
 /* ============================================================
    SYSTEM METADATA — icons, gradients, manufacturers
@@ -301,10 +302,14 @@ function App() {
   // Phase 10: Apply color theme to CSS variables
   useEffect(() => {
     const themes = {
-      pink:   { accent: '#ff2e93', secondary: '#00f0ff', glow: 'rgba(255, 46, 147, 0.3)' },
-      green:  { accent: '#00e676', secondary: '#76ff03', glow: 'rgba(0, 230, 118, 0.3)' },
-      blue:   { accent: '#448aff', secondary: '#18ffff', glow: 'rgba(68, 138, 255, 0.3)' },
-      purple: { accent: '#b388ff', secondary: '#ea80fc', glow: 'rgba(179, 136, 255, 0.3)' },
+      pink:      { accent: '#ff2e93', secondary: '#00f0ff', glow: 'rgba(255, 46, 147, 0.3)' },
+      green:     { accent: '#00e676', secondary: '#76ff03', glow: 'rgba(0, 230, 118, 0.3)' },
+      blue:      { accent: '#448aff', secondary: '#18ffff', glow: 'rgba(68, 138, 255, 0.3)' },
+      purple:    { accent: '#b388ff', secondary: '#ea80fc', glow: 'rgba(179, 136, 255, 0.3)' },
+      cyberpunk: { accent: '#f7f216', secondary: '#ff003c', glow: 'rgba(247, 242, 22, 0.3)' },
+      dracula:   { accent: '#bd93f9', secondary: '#ff79c6', glow: 'rgba(189, 147, 249, 0.3)' },
+      solarized: { accent: '#268bd2', secondary: '#cb4b16', glow: 'rgba(38, 139, 210, 0.3)' },
+      ocean:     { accent: '#00d2ff', secondary: '#3a7bd5', glow: 'rgba(0, 210, 255, 0.3)' },
     };
     const t = themes[colorTheme] || themes.pink;
     document.documentElement.style.setProperty('--accent', t.accent);
@@ -361,18 +366,49 @@ function App() {
     return () => netplayManager.disconnect();
   }, [netplayManager]);
 
-  const bootCore = async (buffer, filename) => {
+  const bootCore = async (buffer, filename, skipAutoLoad = false) => {
     try {
       const coreInstance = new RetroCore();
       const pIdx = netplayStatus === 'CONNECTED' ? (netplayManager.localPlayerIndex || 0) : 0;
+      
       setCore(coreInstance);
       coreRef.current = coreInstance;
       setRomDetails({ buffer, filename, pIdx });
       setIsRunning(true);
+
+      // Phase 11: Auto-Load logic
+      if (!skipAutoLoad && netplayStatus !== 'CONNECTED') {
+        const autoSave = await idb.get(`tieAutoSave_${filename}`);
+        if (autoSave) {
+          const shouldLoad = confirm(`Found an auto-save for "${filename}". Do you want to resume?`);
+          if (shouldLoad) {
+            // Wait for core to be ready. Nostalgist.launch is async, but we need it to fully start.
+            // RetroCore.loadROM will be called by ConsoleScreen.
+            // We'll pass a signal or just wait. 
+            // Better: Add autoLoadState to romDetails.
+            setRomDetails(prev => ({ ...prev, autoLoadState: autoSave }));
+          }
+        }
+      }
     } catch (err) {
       console.error(err);
       alert("Failed to load Core!");
     }
+  };
+
+  const handleExitGame = async () => {
+    if (coreRef.current && romDetails) {
+      try {
+        const result = await coreRef.current.saveState();
+        if (result && result.state) {
+          await idb.set(`tieAutoSave_${romDetails.filename}`, result.state);
+          console.log("Auto-saved before exit");
+        }
+      } catch (e) {
+        console.warn("Auto-save failed during exit", e);
+      }
+    }
+    setIsRunning(false);
   };
 
   // Library Handlers
@@ -500,7 +536,7 @@ function App() {
         inputManager={inputManager}
         netplayManager={netplayManager}
         settings={globalSettings}
-        onExit={() => setIsRunning(false)}
+        onExit={handleExitGame}
       />;
     }
 
@@ -578,6 +614,10 @@ function App() {
                 { id: 'green', label: 'Retro Green', color: '#00e676' },
                 { id: 'blue', label: 'Classic Blue', color: '#448aff' },
                 { id: 'purple', label: 'Purple Haze', color: '#b388ff' },
+                { id: 'cyberpunk', label: 'Cyber City', color: '#f7f216' },
+                { id: 'dracula', label: 'Vampire', color: '#bd93f9' },
+                { id: 'solarized', label: 'Solarized', color: '#268bd2' },
+                { id: 'ocean', label: 'Deep Ocean', color: '#00d2ff' },
               ].map(theme => (
                 <button
                   key={theme.id}
@@ -873,12 +913,14 @@ function App() {
     
     if (activeTab === 'patcher') {
       return (
-        <GamePatcher 
-          onPlayPatchedRom={(buffer, filename) => {
-            currentRomBuffer.current = { buffer, filename };
-            bootCore(buffer, filename);
-          }}
-        />
+        <Suspense fallback={<div style={{ textAlign: 'center', padding: '4rem' }}><div style={{ fontSize: '2rem', marginBottom: '1rem' }}>🔧</div><p style={{ color: 'var(--text-muted)' }}>Loading Game Patcher...</p></div>}>
+          <GamePatcher 
+            onPlayPatchedRom={(buffer, filename) => {
+              currentRomBuffer.current = { buffer, filename };
+              bootCore(buffer, filename);
+            }}
+          />
+        </Suspense>
       );
     }
 
@@ -965,50 +1007,46 @@ function App() {
           </a>
         </div>
 
-        <div className="nav-label">Main</div>
+        <div className="nav-label">Main Console</div>
         <div className="nav-menu">
           <button
             className={`nav-item ${activeTab === 'library' && !isRunning ? 'active' : ''}`}
             onClick={() => { switchTab('library'); setSelectedSystem(null); }}
           >
-            🎮 Games Library
+            <span className="nav-icon">🎮</span> Games Library
           </button>
           <button
             className={`nav-item ${activeTab === 'netplay' && !isRunning ? 'active' : ''}`}
             onClick={() => switchTab('netplay')}
           >
-            🌐 Netplay Lobbies
+            <span className="nav-icon">🌐</span> Netplay Lobbies
           </button>
         </div>
 
 
-        <div className="nav-label">Tools</div>
+        <div className="nav-label">System Tools</div>
         <div className="nav-menu">
           <button
             className={`nav-item ${activeTab === 'patcher' && !isRunning ? 'active' : ''}`}
             onClick={() => switchTab('patcher')}
           >
-            🪄 Game Patcher
+            <span className="nav-icon">🪄</span> Game Patcher
           </button>
-        </div>
-
-        <div className="nav-label">Settings</div>
-        <div className="nav-menu">
           <button
             className={`nav-item ${activeTab === 'settings' && !isRunning ? 'active' : ''}`}
             onClick={() => switchTab('settings')}
           >
-            ⚙️ Display & Perf.
+            <span className="nav-icon">⚙️</span> Configuration
           </button>
         </div>
 
-        <div className="nav-label" style={{ marginTop: 'auto' }}>Info</div>
+        <div className="nav-label" style={{ marginTop: 'auto' }}>Information</div>
         <div className="nav-menu">
           <button
             className={`nav-item ${activeTab === 'about' && !isRunning ? 'active' : ''}`}
             onClick={() => switchTab('about')}
           >
-            ℹ️ About / Credits
+            <span className="nav-icon">ℹ️</span> System Credits
           </button>
         </div>
       </aside>

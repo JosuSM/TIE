@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import './ConsoleScreen.css';
 import { OnScreenGamepad } from './OnScreenGamepad';
 import { InGameMenu } from './InGameMenu';
+import { CrtFilters } from './CrtFilters';
 
 export function ConsoleScreen({ core, romDetails, isRunning, inputManager, netplayManager, settings, onExit }) {
   const canvasRef = useRef(null);
@@ -83,7 +84,12 @@ export function ConsoleScreen({ core, romDetails, isRunning, inputManager, netpl
     if (core.isNostalgist) {
       if (!renderStarted.current && romDetails) {
         renderStarted.current = true;
-        core.loadROM(romDetails.buffer, romDetails.filename, canvas, romDetails.pIdx || 0).catch(e => console.error(e));
+        core.loadROM(romDetails.buffer, romDetails.filename, canvas, romDetails.pIdx || 0).then(() => {
+          if (romDetails.autoLoadState) {
+            console.log("Applying auto-load state...");
+            core.loadState(romDetails.autoLoadState);
+          }
+        }).catch(e => console.error(e));
       }
 
       let lastInputStr = "";
@@ -192,6 +198,13 @@ export function ConsoleScreen({ core, romDetails, isRunning, inputManager, netpl
 
   return (
     <div className={`console-wrapper ${crtClass}`} style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <CrtFilters />
+      
+      {/* Shadow Mask Overlay for CRT Modes */}
+      {crtFilter !== 'none' && crtFilter !== 'lcd' && (
+        <div className="crt-overlay shadow-mask" style={{ position: 'absolute', inset: 0, zIndex: 7, pointerEvents: 'none', background: 'url("#shadowmask")', opacity: 0.05 }}></div>
+      )}
+
       <canvas
         ref={canvasRef}
         width={core?.width || 320}

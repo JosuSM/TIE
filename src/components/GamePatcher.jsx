@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './GamePatcher.css';
-import RomPatcher from 'rom-patcher/rom-patcher-js/RomPatcher.js';
-import BinFile from 'rom-patcher/rom-patcher-js/modules/BinFile.js';
+import { RomPatcher, BinFile } from '../core/romPatcherLoader';
 
 export function GamePatcher({ onPlayPatchedRom }) {
   const [romFile, setRomFile] = useState(null);

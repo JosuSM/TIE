@@ -256,9 +256,18 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
 
   /* ============ CHEATS ============ */
   const applyCheat = () => {
-    if (!cheatInput.trim()) return;
-    setCheatsApplied(prev => [...prev, cheatInput.trim()]);
+    const code = cheatInput.trim().toUpperCase();
+    if (!code) return;
+    
+    setCheatsApplied(prev => [...prev, code]);
     setCheatInput('');
+
+    // Attempt to send to core. RetroArch usually likes CHEAT_ADD followed by CHEAT_TOGGLE
+    // Note: This is an optimistic send, actual system support varies by core.
+    if (core?.sendCommand) {
+       core.sendCommand(`CHEAT_ADD ${code}`);
+       // Optionally wait a bit then toggle if it's not auto-enabled
+    }
   };
 
   /* ============ LAYOUT DETECTION ============ */
@@ -308,6 +317,16 @@ export function InGameMenu({ core, onClose, onExitGame, settings, updateSetting,
               <button className="menu-btn" onClick={doScreenshot}>
                 <span className="menu-btn-icon">📸</span>
                 Screenshot
+              </button>
+              <button 
+                className="menu-btn"
+                onMouseDown={() => core?.sendCommand?.('REWIND_HOLD')}
+                onMouseUp={() => core?.sendCommand?.('REWIND_RELEASE')}
+                onTouchStart={() => core?.sendCommand?.('REWIND_HOLD')}
+                onTouchEnd={() => core?.sendCommand?.('REWIND_RELEASE')}
+              >
+                <span className="menu-btn-icon">⏪</span>
+                Rewind (Hold)
               </button>
               <button
                 className={`menu-btn ${isFastForward ? 'active-toggle' : ''}`}
