@@ -1,5 +1,5 @@
-// TIE — Professional-grade Service Worker for Retro Gaming (v0.2)
-const CACHE_NAME = 'tie-assets-v2';
+// TIE — Professional-grade Service Worker for Retro Gaming (v0.3)
+const CACHE_NAME = 'tie-assets-v3';
 const CORES_CACHE = 'tie-cores-v1';
 
 const PRECACHE_ASSETS = [
